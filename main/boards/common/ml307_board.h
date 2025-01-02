@@ -13,14 +13,14 @@ protected:
 
 public:
     Ml307Board(gpio_num_t tx_pin, gpio_num_t rx_pin, size_t rx_buffer_size = 4096);
-    virtual void StartNetwork() override;
-    virtual Http* CreateHttp() override;
-    virtual WebSocket* CreateWebSocket() override;
-    virtual Mqtt* CreateMqtt() override;
-    virtual Udp* CreateUdp() override;
-    virtual bool GetNetworkState(std::string& network_name, int& signal_quality, std::string& signal_quality_text) override;
-    virtual const char* GetNetworkStateIcon() override;
-    virtual void SetPowerSaveMode(bool enabled) override;
+    virtual void StartNetwork() override;  // 启动网络
+    virtual Http* CreateHttp() override;  // 创建HTTP
+    virtual WebSocket* CreateWebSocket() override;  // 创建WebSocket
+    virtual Mqtt* CreateMqtt() override;  // 创建MQTT
+    virtual Udp* CreateUdp() override;  // 创建UDP
+    virtual bool GetNetworkState(std::string& network_name, int& signal_quality, std::string& signal_quality_text) override;  // 获取网络状态
+    virtual const char* GetNetworkStateIcon() override;  // 获取网络状态图标
+    virtual void SetPowerSaveMode(bool enabled) override;  // 设置省电模式
 };
 
 #endif // ML307_BOARD_H

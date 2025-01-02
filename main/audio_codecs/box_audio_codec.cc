@@ -12,62 +12,62 @@ BoxAudioCodec::BoxAudioCodec(void* i2c_master_handle, int input_sample_rate, int
     duplex_ = true; // 是否双工
     input_reference_ = input_reference; // 是否使用参考输入，实现回声消除
     input_channels_ = input_reference_ ? 2 : 1; // 输入通道数
-    input_sample_rate_ = input_sample_rate;
-    output_sample_rate_ = output_sample_rate;
+    input_sample_rate_ = input_sample_rate; // 输入采样率
+    output_sample_rate_ = output_sample_rate; // 输出采样率
 
-    CreateDuplexChannels(mclk, bclk, ws, dout, din);
+    CreateDuplexChannels(mclk, bclk, ws, dout, din); // 创建双工通道
 
     // Do initialize of related interface: data_if, ctrl_if and gpio_if
     audio_codec_i2s_cfg_t i2s_cfg = {
-        .port = I2S_NUM_0,
-        .rx_handle = rx_handle_,
-        .tx_handle = tx_handle_,
+        .port = I2S_NUM_0, // I2S端口
+        .rx_handle = rx_handle_, // 接收句柄
+        .tx_handle = tx_handle_, // 发送句柄
     };
-    data_if_ = audio_codec_new_i2s_data(&i2s_cfg);
+    data_if_ = audio_codec_new_i2s_data(&i2s_cfg); // 创建I2S数据接口   
     assert(data_if_ != NULL);
 
     // Output
-    audio_codec_i2c_cfg_t i2c_cfg = {
-        .port = (i2c_port_t)1,
-        .addr = es8311_addr,
-        .bus_handle = i2c_master_handle,
+    audio_codec_i2c_cfg_t i2c_cfg = {  // I2C配置
+        .port = (i2c_port_t)1,  // I2C端口
+        .addr = es8311_addr,  // 地址
+        .bus_handle = i2c_master_handle,  // 总线句柄
     };
     out_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
     assert(out_ctrl_if_ != NULL);
 
-    gpio_if_ = audio_codec_new_gpio();
+    gpio_if_ = audio_codec_new_gpio(); // 创建GPIO接口
     assert(gpio_if_ != NULL);
 
-    es8156_codec_cfg_t  es8311_cfg = {};
-    es8311_cfg.ctrl_if = out_ctrl_if_;
-    es8311_cfg.gpio_if = gpio_if_;
-    es8311_cfg.pa_pin = pa_pin;
-    es8311_cfg.hw_gain.pa_voltage = 5.0;
-    es8311_cfg.hw_gain.codec_dac_voltage = 3.3;
-    out_codec_if_ = es8156_codec_new(&es8311_cfg);
+    es8156_codec_cfg_t  es8311_cfg = {}; // ES8311配置
+    es8311_cfg.ctrl_if = out_ctrl_if_; // 控制接口
+    es8311_cfg.gpio_if = gpio_if_; // GPIO接口
+    es8311_cfg.pa_pin = pa_pin; // PA引脚
+    es8311_cfg.hw_gain.pa_voltage = 5.0; // PA电压
+    es8311_cfg.hw_gain.codec_dac_voltage = 3.3; // 编解码器DAC电压
+    out_codec_if_ = es8156_codec_new(&es8311_cfg); // 创建ES8311编解码器接口
     assert(out_codec_if_ != NULL);
 
-    esp_codec_dev_cfg_t dev_cfg = {
-        .dev_type = ESP_CODEC_DEV_TYPE_OUT,
-        .codec_if = out_codec_if_,
-        .data_if = data_if_,
+    esp_codec_dev_cfg_t dev_cfg = {  // 设备配置    
+        .dev_type = ESP_CODEC_DEV_TYPE_OUT,  // 设备类型
+        .codec_if = out_codec_if_,  // 编解码器接口
+        .data_if = data_if_,  // 数据接口
     };
-    output_dev_ = esp_codec_dev_new(&dev_cfg);
-    assert(output_dev_ != NULL);
+    output_dev_ = esp_codec_dev_new(&dev_cfg); // 创建输出设备
+    assert(output_dev_ != NULL);    
 
     // Input
-    i2c_cfg.addr = es7210_addr;
-    in_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg);
+    i2c_cfg.addr = es7210_addr; // 地址
+    in_ctrl_if_ = audio_codec_new_i2c_ctrl(&i2c_cfg); // 创建输入控制接口
     assert(in_ctrl_if_ != NULL);
 
-    es7243e_codec_cfg_t es7210_cfg = {};
-    es7210_cfg.ctrl_if = in_ctrl_if_;
-    in_codec_if_ = es7243e_codec_new(&es7210_cfg);
+    es7243e_codec_cfg_t es7243e_cfg = {}; // ES7210配置  
+    es7243e_cfg.ctrl_if = in_ctrl_if_; // 控制接口
+    in_codec_if_ = es7243e_codec_new(&es7243e_cfg); // 创建ES7243E编解码器接口
     assert(in_codec_if_ != NULL);
 
-    dev_cfg.dev_type = ESP_CODEC_DEV_TYPE_IN;
-    dev_cfg.codec_if = in_codec_if_;
-    input_dev_ = esp_codec_dev_new(&dev_cfg);
+    dev_cfg.dev_type = ESP_CODEC_DEV_TYPE_IN; // 设备类型   
+    dev_cfg.codec_if = in_codec_if_; // 编解码器接口
+    input_dev_ = esp_codec_dev_new(&dev_cfg); // 创建输入设备
     assert(input_dev_ != NULL);
 
     ESP_LOGI(TAG, "BoxAudioDevice initialized");
@@ -186,26 +186,27 @@ void BoxAudioCodec::EnableInput(bool enable) {
     }
     if (enable) {
         esp_codec_dev_sample_info_t fs = {
-            .bits_per_sample = 16,
-            .channel = 4,
-            .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0),
-            .sample_rate = (uint32_t)output_sample_rate_,
-            .mclk_multiple = 0,
+            .bits_per_sample = 16, // 位数  
+            .channel = 4, // 通道数
+            .channel_mask = ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), // 通道掩码
+            .sample_rate = (uint32_t)output_sample_rate_, // 采样率
+            .mclk_multiple = 0, // MCLK倍数
         };
         if (input_reference_) {
-            fs.channel_mask |= ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1);
+            fs.channel_mask |= ESP_CODEC_DEV_MAKE_CHANNEL_MASK(1); // 如果使用参考输入，则增加一个通道
         }
-        ESP_ERROR_CHECK(esp_codec_dev_open(input_dev_, &fs));
+        ESP_ERROR_CHECK(esp_codec_dev_open(input_dev_, &fs)); // 打开输入设备   
         // 处理设置输入增益
-        esp_err_t gain_ret = esp_codec_dev_set_in_channel_gain(input_dev_, 
-                                ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), 40.0);
-        if (gain_ret == ESP_ERR_NOT_SUPPORTED) {
+        esp_err_t gain_ret = esp_codec_dev_set_in_gain(input_dev_, 100.0); // 设置输入增益
+        // esp_err_t gain_ret = esp_codec_dev_set_in_channel_gain(input_dev_,  
+        //                         ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), 40.0); // 设置输入增益
+        if (gain_ret == ESP_ERR_NOT_SUPPORTED) { // 如果设置输入增益不支持
             ESP_LOGW(TAG, "设置输入增益不支持，跳过此步骤");
-        } else if (gain_ret != ESP_OK) {
+        } else if (gain_ret != ESP_OK) { // 如果设置输入增益失败
             ESP_LOGE(TAG, "设置输入增益失败: %d", gain_ret);
         }
     } else {
-        ESP_ERROR_CHECK(esp_codec_dev_close(input_dev_));
+        ESP_ERROR_CHECK(esp_codec_dev_close(input_dev_)); // 关闭输入设备
     }
     AudioCodec::EnableInput(enable);
 }

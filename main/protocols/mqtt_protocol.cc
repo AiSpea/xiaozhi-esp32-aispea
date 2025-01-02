@@ -11,98 +11,98 @@
 
 #define TAG "MQTT"
 
-MqttProtocol::MqttProtocol() {
-    event_group_handle_ = xEventGroupCreate();
+MqttProtocol::MqttProtocol() {  // MQTT协议构造函数
+    event_group_handle_ = xEventGroupCreate();  // 创建事件组
 
-    StartMqttClient();
+    StartMqttClient();  // 开始MQTT客户端
 }
 
-MqttProtocol::~MqttProtocol() {
-    ESP_LOGI(TAG, "MqttProtocol deinit");
-    if (udp_ != nullptr) {
-        delete udp_;
+MqttProtocol::~MqttProtocol() {  // MQTT协议析构函数
+    ESP_LOGI(TAG, "MqttProtocol deinit");  // 打印MQTT协议析构信息
+    if (udp_ != nullptr) {  // 如果UDP不为空
+        delete udp_;  // 删除UDP
     }
-    if (mqtt_ != nullptr) {
-        delete mqtt_;
+    if (mqtt_ != nullptr) {  // 如果MQTT不为空
+        delete mqtt_;  // 删除MQTT
     }
-    vEventGroupDelete(event_group_handle_);
+    vEventGroupDelete(event_group_handle_);  // 删除事件组
 }
 
-bool MqttProtocol::StartMqttClient() {
-    if (mqtt_ != nullptr) {
-        ESP_LOGW(TAG, "Mqtt client already started");
-        delete mqtt_;
+bool MqttProtocol::StartMqttClient() {  // 开始MQTT客户端
+    if (mqtt_ != nullptr) {  // 如果MQTT不为空
+        ESP_LOGW(TAG, "Mqtt client already started");  // 打印MQTT客户端已启动信息
+        delete mqtt_;  // 删除MQTT
     }
 
-    Settings settings("mqtt", false);
-    endpoint_ = settings.GetString("endpoint");
-    client_id_ = settings.GetString("client_id");
-    username_ = settings.GetString("username");
-    password_ = settings.GetString("password");
-    subscribe_topic_ = settings.GetString("subscribe_topic");
-    publish_topic_ = settings.GetString("publish_topic");
+    Settings settings("mqtt", false);  // 设置MQTT
+    endpoint_ = settings.GetString("endpoint");  // 获取MQTT端点
+    client_id_ = settings.GetString("client_id");  // 获取MQTT客户端ID
+    username_ = settings.GetString("username");  // 获取MQTT用户名
+    password_ = settings.GetString("password");  // 获取MQTT密码
+    subscribe_topic_ = settings.GetString("subscribe_topic");  // 获取MQTT订阅主题
+    publish_topic_ = settings.GetString("publish_topic");  // 获取MQTT发布主题
 
     if (endpoint_.empty()) {
         ESP_LOGE(TAG, "MQTT endpoint is not specified");
         return false;
     }
 
-    mqtt_ = Board::GetInstance().CreateMqtt();
-    mqtt_->SetKeepAlive(90);
+    mqtt_ = Board::GetInstance().CreateMqtt();  // 创建MQTT
+    mqtt_->SetKeepAlive(90);  // 设置MQTT保持连接时间
 
-    mqtt_->OnDisconnected([this]() {
-        ESP_LOGI(TAG, "Disconnected from endpoint");
+    mqtt_->OnDisconnected([this]() {  // 设置MQTT断开连接事件
+        ESP_LOGI(TAG, "Disconnected from endpoint");  // 打印MQTT断开连接信息
     });
 
-    mqtt_->OnMessage([this](const std::string& topic, const std::string& payload) {
-        cJSON* root = cJSON_Parse(payload.c_str());
-        if (root == nullptr) {
-            ESP_LOGE(TAG, "Failed to parse json message %s", payload.c_str());
+    mqtt_->OnMessage([this](const std::string& topic, const std::string& payload) {  // 设置MQTT消息事件
+        cJSON* root = cJSON_Parse(payload.c_str());  // 解析JSON消息
+        if (root == nullptr) {  // 如果解析失败
+            ESP_LOGE(TAG, "Failed to parse json message %s", payload.c_str());  // 打印错误信息
             return;
         }
-        cJSON* type = cJSON_GetObjectItem(root, "type");
-        if (type == nullptr) {
-            ESP_LOGE(TAG, "Message type is not specified");
-            cJSON_Delete(root);
+        cJSON* type = cJSON_GetObjectItem(root, "type");  // 获取消息类型
+        if (type == nullptr) {  // 如果消息类型为空
+            ESP_LOGE(TAG, "Message type is not specified");  // 打印错误信息
+            cJSON_Delete(root);  // 删除JSON
             return;
         }
 
-        if (strcmp(type->valuestring, "hello") == 0) {
-            ParseServerHello(root);
-        } else if (strcmp(type->valuestring, "goodbye") == 0) {
-            auto session_id = cJSON_GetObjectItem(root, "session_id");
-            if (session_id == nullptr || session_id_ == session_id->valuestring) {
-                Application::GetInstance().Schedule([this]() {
-                    CloseAudioChannel();
+        if (strcmp(type->valuestring, "hello") == 0) {  // 如果消息类型为hello
+            ParseServerHello(root);  // 解析服务器hello消息
+        } else if (strcmp(type->valuestring, "goodbye") == 0) {  // 如果消息类型为goodbye
+            auto session_id = cJSON_GetObjectItem(root, "session_id");  // 获取会话ID
+            if (session_id == nullptr || session_id_ == session_id->valuestring) {  // 如果会话ID为空或会话ID等于session_id->valuestring
+                Application::GetInstance().Schedule([this]() {  // 调度关闭音频通道
+                    CloseAudioChannel();  // 关闭音频通道
                 });
             }
-        } else if (on_incoming_json_ != nullptr) {
-            on_incoming_json_(root);
+        } else if (on_incoming_json_ != nullptr) {  // 如果on_incoming_json_不为空
+            on_incoming_json_(root);  // 调用on_incoming_json_
         }
-        cJSON_Delete(root);
+        cJSON_Delete(root);  // 删除JSON
     });
 
-    ESP_LOGI(TAG, "Connecting to endpoint %s", endpoint_.c_str());
-    if (!mqtt_->Connect(endpoint_, 8883, client_id_, username_, password_)) {
-        ESP_LOGE(TAG, "Failed to connect to endpoint");
-        if (on_network_error_ != nullptr) {
-            on_network_error_("无法连接服务");
+    ESP_LOGI(TAG, "Connecting to endpoint %s", endpoint_.c_str());  // 打印连接到端点信息
+    if (!mqtt_->Connect(endpoint_, 8883, client_id_, username_, password_)) {  // 连接到端点
+        ESP_LOGE(TAG, "Failed to connect to endpoint");  // 打印连接失败信息
+        if (on_network_error_ != nullptr) {  // 如果on_network_error_不为空
+            on_network_error_("无法连接服务");  // 调用on_network_error_
         }
         return false;
     }
 
-    ESP_LOGI(TAG, "Connected to endpoint");
-    if (!subscribe_topic_.empty()) {
-        mqtt_->Subscribe(subscribe_topic_, 2);
+    ESP_LOGI(TAG, "Connected to endpoint");  // 打印连接到端点信息
+    if (!subscribe_topic_.empty()) {  // 如果订阅主题不为空
+        mqtt_->Subscribe(subscribe_topic_, 2);  // 订阅主题
     }
-    return true;
+    return true;  // 返回true
 }
 
-void MqttProtocol::SendText(const std::string& text) {
-    if (publish_topic_.empty()) {
-        return;
+void MqttProtocol::SendText(const std::string& text) {  // 发送文本消息
+    if (publish_topic_.empty()) {  // 如果发布主题为空
+        return;  // 返回
     }
-    mqtt_->Publish(publish_topic_, text);
+    mqtt_->Publish(publish_topic_, text);  // 发布消息
 }
 
 void MqttProtocol::SendAudio(const std::vector<uint8_t>& data) {
@@ -150,10 +150,10 @@ void MqttProtocol::CloseAudioChannel() {
 }
 
 bool MqttProtocol::OpenAudioChannel() {
-    if (mqtt_ == nullptr || !mqtt_->IsConnected()) {
-        ESP_LOGI(TAG, "MQTT is not connected, try to connect now");
-        if (!StartMqttClient()) {
-            return false;
+    if (mqtt_ == nullptr || !mqtt_->IsConnected()) {  // 如果MQTT未连接
+        ESP_LOGI(TAG, "MQTT is not connected, try to connect now");  // 打印MQTT未连接
+        if (!StartMqttClient()) {  // 尝试连接MQTT
+            return false;  // 返回失败
         }
     }
 

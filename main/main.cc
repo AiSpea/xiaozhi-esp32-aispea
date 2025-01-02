@@ -13,7 +13,7 @@
 extern "C" void app_main(void)
 {
     // Initialize the default event loop
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());  // 创建默认事件循环
 
     // Initialize NVS flash for WiFi configuration
     esp_err_t ret = nvs_flash_init();
@@ -25,14 +25,14 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // Otherwise, launch the application
-    Application::GetInstance().Start();
+    Application::GetInstance().Start();  // 启动应用程序
 
     // Dump CPU usage every 10 second
     while (true) {
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);  // 延迟10秒
         // SystemInfo::PrintRealTimeStats(pdMS_TO_TICKS(1000));
-        int free_sram = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-        int min_free_sram = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
-        ESP_LOGI(TAG, "Free internal: %u minimal internal: %u", free_sram, min_free_sram);
+        int free_sram = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);  // 获取内部内存的空闲大小
+        int min_free_sram = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);  // 获取内部内存的最小空闲大小
+        ESP_LOGI(TAG, "Free internal: %u minimal internal: %u", free_sram, min_free_sram);  // 打印内部内存的空闲大小和最小空闲大小
     }
 }

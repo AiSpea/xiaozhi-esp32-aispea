@@ -170,10 +170,10 @@ void WakeWordDetect::StoreWakeWordData(uint16_t* data, size_t samples) {  // 存
     }
 }
 
-void WakeWordDetect::EncodeWakeWordData() {
-    wake_word_opus_.clear();
-    if (wake_word_encode_task_stack_ == nullptr) {
-        wake_word_encode_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 8, MALLOC_CAP_SPIRAM);
+void WakeWordDetect::EncodeWakeWordData() {  // 编码唤醒词数据
+    wake_word_opus_.clear();  // 清空唤醒词OPUS数据列表
+    if (wake_word_encode_task_stack_ == nullptr) {  // 如果唤醒词编码任务栈为空
+        wake_word_encode_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 8, MALLOC_CAP_SPIRAM);  // 分配唤醒词编码任务栈
     }
     wake_word_encode_task_ = xTaskCreateStatic([](void* arg) {
         auto this_ = (WakeWordDetect*)arg;

@@ -19,24 +19,37 @@ private:
 
     void InitializeI2c() {
         // Initialize I2C peripheral
-        i2c_master_bus_config_t i2c_bus_cfg = {
-            .i2c_port = (i2c_port_t)1,
-            .sda_io_num = AUDIO_CODEC_I2C_SDA_PIN,
-            .scl_io_num = AUDIO_CODEC_I2C_SCL_PIN,
-            .clk_source = I2C_CLK_SRC_DEFAULT,
-            .glitch_ignore_cnt = 7,
-            .intr_priority = 0,
-            .trans_queue_depth = 0,
+        i2c_master_bus_config_t i2c_bus_cfg = {  // I2C总线配置
+            .i2c_port = (i2c_port_t)1,  // I2C端口
+            .sda_io_num = AUDIO_CODEC_I2C_SDA_PIN,  // SDA引脚
+            .scl_io_num = AUDIO_CODEC_I2C_SCL_PIN,  // SCL引脚
+            .clk_source = I2C_CLK_SRC_DEFAULT,  // 时钟源
+            .glitch_ignore_cnt = 7,  // 抖动忽略计数
+            .intr_priority = 0,  // 中断优先级
+            .trans_queue_depth = 0,  // 传输队列深度
             .flags = {
-                .enable_internal_pullup = 1,
+                .enable_internal_pullup = 1,  // 启用内部上拉
             },
         };
-        ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_));
+        ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_));  // 创建I2C总线
     }
 
     void InitializeButtons() {
-        boot_button_.OnClick([this]() {
-            Application::GetInstance().ToggleChatState();
+        // boot_button_.OnClick([this]() {  // 设置按钮点击事件
+        //     Application::GetInstance().ToggleChatState();  // 切换聊天状态
+        // });
+        // boot_button_.OnPressUp([this](){
+        //     Application::GetInstance().ToggleChatState();  // 切换聊天状态 
+        // });
+        boot_button_.OnLangStart([this](){
+            ESP_LOGW(TAG, "按键长按开始");  // 打印活动任务数
+        });
+        boot_button_.OnPressDown([this](){
+            Application::GetInstance().ToggleChatState();  // 切换聊天状态 
+            ESP_LOGW(TAG, "按键按下");  // 打印活动任务数
+        }); 
+        boot_button_.OnPressUp([this](){
+            ESP_LOGW(TAG, "按键松手");  // 打印活动任务数
         });
     }
 
@@ -47,14 +60,14 @@ private:
     }
 
 public:
-    EspBox3Board() : boot_button_(BOOT_BUTTON_GPIO) {
-        InitializeI2c();
-        InitializeButtons();
-        InitializeIot();
+    EspBox3Board() : boot_button_(BOOT_BUTTON_GPIO) {  // 初始化按钮
+        InitializeI2c();  // 初始化I2C
+        InitializeButtons();  // 初始化按钮
+        InitializeIot();  // 初始化物联网
     }
 
-    virtual Led* GetBuiltinLed() override {
-        static Led led(GPIO_NUM_NC);
+    virtual Led* GetBuiltinLed() override {     
+        static Led led(BUILTIN_LED_GPIO);  // 获取内置LED
         return &led;
     }
 

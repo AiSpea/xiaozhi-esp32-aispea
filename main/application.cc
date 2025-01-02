@@ -88,7 +88,7 @@ void Application::CheckNewVersion() {   // 检查新版本
     }
 }
 
-void Application::Alert(const std::string& title, const std::string& message) {
+void Application::Alert(const std::string& title, const std::string& message) {  // 显示错误消息
     ESP_LOGW(TAG, "Alert: %s, %s", title.c_str(), message.c_str());
     auto display = Board::GetInstance().GetDisplay();
     display->ShowNotification(message);
@@ -121,13 +121,13 @@ void Application::PlayLocalFile(const char* data, size_t size) {
 }
 
 void Application::ToggleChatState() {  // 切换聊天状态
-    Schedule([this]() {
+    Schedule([this]() {  // 调度任务
         if (!protocol_) {  // 如果协议未初始化
             ESP_LOGE(TAG, "Protocol not initialized");  // 打印错误日志
             return;
         }
 
-        if (chat_state_ == kChatStateIdle) {
+        if (chat_state_ == kChatStateIdle) {  // 如果聊天状态为空闲
             SetChatState(kChatStateConnecting);  // 设置聊天状态为连接中
             if (!protocol_->OpenAudioChannel()) {  // 如果无法打开音频通道
                 Alert("Error", "Failed to open audio channel");  // 显示错误消息
@@ -175,7 +175,7 @@ void Application::StartListening() {  // 开始监听
     });
 }
 
-void Application::StopListening() {
+void Application::StopListening() {  // 停止监听
     Schedule([this]() {
         if (chat_state_ == kChatStateListening) {
             protocol_->SendStopListening();
@@ -184,7 +184,7 @@ void Application::StopListening() {
     });
 }
 
-void Application::Start() {
+void Application::Start() {  // 启动应用程序
     auto& board = Board::GetInstance();  // 获取板子实例
     auto builtin_led = board.GetBuiltinLed();  // 获取内置LED
     builtin_led->SetBlue();  // 设置LED颜色为蓝色
@@ -222,7 +222,7 @@ void Application::Start() {
     }, "main_loop", 4096 * 2, this, 2, nullptr);  // 创建主循环任务
 
     /* Wait for the network to be ready */
-    board.StartNetwork();
+    board.StartNetwork();  // 启动网络
 
     // Check for new firmware version or get the MQTT broker address
     xTaskCreate([](void* arg) {  // 创建检查新版本任务
@@ -232,9 +232,9 @@ void Application::Start() {
     }, "check_new_version", 4096 * 2, this, 1, nullptr);  // 创建检查新版本任务
 
 #if CONFIG_IDF_TARGET_ESP32S3
-    audio_processor_.Initialize(codec->input_channels(), codec->input_reference());
-    audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
-        background_task_.Schedule([this, data = std::move(data)]() mutable {
+    audio_processor_.Initialize(codec->input_channels(), codec->input_reference());  // 初始化音频处理器
+    audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {  // 设置音频处理器输出
+        background_task_.Schedule([this, data = std::move(data)]() mutable {  // 调度任务
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
                 Schedule([this, opus = std::move(opus)]() {
                     protocol_->SendAudio(opus);
@@ -243,26 +243,26 @@ void Application::Start() {
         });
     });
 
-    wake_word_detect_.Initialize(codec->input_channels(), codec->input_reference());
-    wake_word_detect_.OnVadStateChange([this](bool speaking) {
-        Schedule([this, speaking]() {
-            auto builtin_led = Board::GetInstance().GetBuiltinLed();
-            if (chat_state_ == kChatStateListening) {
-                if (speaking) {
-                    builtin_led->SetRed(HIGH_BRIGHTNESS);
+    wake_word_detect_.Initialize(codec->input_channels(), codec->input_reference());  // 初始化唤醒词检测   
+    wake_word_detect_.OnVadStateChange([this](bool speaking) {  // 设置VAD状态变化
+        Schedule([this, speaking]() {   
+            auto builtin_led = Board::GetInstance().GetBuiltinLed();  // 获取内置LED
+            if (chat_state_ == kChatStateListening) {  // 如果聊天状态为监听中
+                if (speaking) {  // 如果正在说话
+                    builtin_led->SetRed(HIGH_BRIGHTNESS);  // 设置LED为红色高亮度
                 } else {
-                    builtin_led->SetRed(LOW_BRIGHTNESS);
+                    builtin_led->SetRed(LOW_BRIGHTNESS);  // 设置LED为红色低亮度
                 }
-                builtin_led->TurnOn();
+                builtin_led->TurnOn();  // 打开LED
             }
         });
     });
 
-    wake_word_detect_.OnWakeWordDetected([this](const std::string& wake_word) {
+    wake_word_detect_.OnWakeWordDetected([this](const std::string& wake_word) {  // 设置唤醒词检测
         Schedule([this, &wake_word]() {
-            if (chat_state_ == kChatStateIdle) {
-                SetChatState(kChatStateConnecting);
-                wake_word_detect_.EncodeWakeWordData();
+            if (chat_state_ == kChatStateIdle) {  // 如果聊天状态为空闲
+                SetChatState(kChatStateConnecting);  // 设置聊天状态为连接中
+                wake_word_detect_.EncodeWakeWordData();  // 编码唤醒词数据
 
                 if (!protocol_->OpenAudioChannel()) {
                     ESP_LOGE(TAG, "Failed to open audio channel");
@@ -277,12 +277,12 @@ void Application::Start() {
                     protocol_->SendAudio(opus);
                 }
                 // Set the chat state to wake word detected
-                protocol_->SendWakeWordDetected(wake_word);
-                ESP_LOGI(TAG, "Wake word detected: %s", wake_word.c_str());
-                keep_listening_ = true;
-                SetChatState(kChatStateListening);
-            } else if (chat_state_ == kChatStateSpeaking) {
-                AbortSpeaking(kAbortReasonWakeWordDetected);
+                protocol_->SendWakeWordDetected(wake_word);  // 发送唤醒词检测
+                ESP_LOGI(TAG, "Wake word detected: %s", wake_word.c_str());  // 打印唤醒词检测
+                keep_listening_ = true;  // 保持监听
+                SetChatState(kChatStateListening);  // 设置聊天状态为监听中
+            } else if (chat_state_ == kChatStateSpeaking) {  // 如果聊天状态为说话中
+                AbortSpeaking(kAbortReasonWakeWordDetected);  // 中止说话
             }
 
             // Resume detection
@@ -388,10 +388,10 @@ void Application::Start() {
     SetChatState(kChatStateIdle);  // 设置聊天状态为空闲
 }
 
-void Application::Schedule(std::function<void()> callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    main_tasks_.push_back(std::move(callback));
-    xEventGroupSetBits(event_group_, SCHEDULE_EVENT);
+void Application::Schedule(std::function<void()> callback) {  // 调度任务
+    std::lock_guard<std::mutex> lock(mutex_);   // 锁定互斥锁
+    main_tasks_.push_back(std::move(callback));  // 将任务添加到任务列表
+    xEventGroupSetBits(event_group_, SCHEDULE_EVENT);  // 设置事件组位
 }
 
 // The Main Loop controls the chat state and websocket connection
@@ -399,8 +399,8 @@ void Application::Schedule(std::function<void()> callback) {
 // they should use Schedule to call this function
 void Application::MainLoop() {  // 主循环
     while (true) {
-        auto bits = xEventGroupWaitBits(event_group_,
-            SCHEDULE_EVENT | AUDIO_INPUT_READY_EVENT | AUDIO_OUTPUT_READY_EVENT,    // 等待事件组中的事件
+        auto bits = xEventGroupWaitBits(event_group_,  // 等待事件组中的事件
+            SCHEDULE_EVENT | AUDIO_INPUT_READY_EVENT | AUDIO_OUTPUT_READY_EVENT,  // 等待事件组中的事件
             pdTRUE, pdFALSE, portMAX_DELAY);  // 等待事件组中的事件 
 
         if (bits & AUDIO_INPUT_READY_EVENT) {  // 如果音频输入事件
@@ -428,52 +428,52 @@ void Application::ResetDecoder() {  // 重置解码器
     Board::GetInstance().GetAudioCodec()->EnableOutput(true);
 }
 
-void Application::OutputAudio() {
+void Application::OutputAudio() {  // 输出音频
     auto now = std::chrono::steady_clock::now();
     auto codec = Board::GetInstance().GetAudioCodec();
     const int max_silence_seconds = 10;
 
     std::unique_lock<std::mutex> lock(mutex_);
-    if (audio_decode_queue_.empty()) {
+    if (audio_decode_queue_.empty()) {  // 如果音频解码队列为空
         // Disable the output if there is no audio data for a long time
-        if (chat_state_ == kChatStateIdle) {
+        if (chat_state_ == kChatStateIdle) {  // 如果聊天状态为空闲
             auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - last_output_time_).count();
-            if (duration > max_silence_seconds) {
+            if (duration > max_silence_seconds) {  // 如果持续时间大于最大静音时间
                 codec->EnableOutput(false);
             }
         }
         return;
     }
 
-    if (chat_state_ == kChatStateListening) {
-        audio_decode_queue_.clear();
+    if (chat_state_ == kChatStateListening) {  // 如果聊天状态为监听中
+        audio_decode_queue_.clear();  // 清空音频解码队列
         return;
     }
 
-    last_output_time_ = now;
-    auto opus = std::move(audio_decode_queue_.front());
-    audio_decode_queue_.pop_front();
-    lock.unlock();
+    last_output_time_ = now;  // 更新最后一次输出时间   
+    auto opus = std::move(audio_decode_queue_.front());  // 获取音频解码队列中的音频数据
+    audio_decode_queue_.pop_front();  // 移除音频解码队列中的音频数据
+    lock.unlock();  // 解锁互斥锁
 
-    background_task_.Schedule([this, codec, opus = std::move(opus)]() mutable {
-        if (aborted_) {
+    background_task_.Schedule([this, codec, opus = std::move(opus)]() mutable {  // 调度任务
+        if (aborted_) {  // 如果中止标志为true
             return;
         }
 
         std::vector<int16_t> pcm;
-        if (!opus_decoder_->Decode(std::move(opus), pcm)) {
+        if (!opus_decoder_->Decode(std::move(opus), pcm)) {  // 如果解码失败
             return;
         }
 
         // Resample if the sample rate is different
-        if (opus_decode_sample_rate_ != codec->output_sample_rate()) {
-            int target_size = output_resampler_.GetOutputSamples(pcm.size());
-            std::vector<int16_t> resampled(target_size);
-            output_resampler_.Process(pcm.data(), pcm.size(), resampled.data());
-            pcm = std::move(resampled);
+        if (opus_decode_sample_rate_ != codec->output_sample_rate()) {  // 如果解码采样率与输出采样率不同
+            int target_size = output_resampler_.GetOutputSamples(pcm.size());  // 获取目标大小
+            std::vector<int16_t> resampled(target_size);  // 创建重采样后的音频数据
+            output_resampler_.Process(pcm.data(), pcm.size(), resampled.data());  // 处理音频数据
+            pcm = std::move(resampled);  // 将重采样后的音频数据赋值给音频数据
         }
-        
-        codec->OutputData(pcm);
+
+        codec->OutputData(pcm);  // 输出音频数据
     });
 }
 
@@ -509,11 +509,11 @@ void Application::InputAudio() {  // 输入音频
     }
     
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (audio_processor_.IsRunning()) {
-        audio_processor_.Input(data);
+    if (audio_processor_.IsRunning()) {  // 如果音频处理器正在运行
+        audio_processor_.Input(data);  // 输入音频数据
     }
-    if (wake_word_detect_.IsDetectionRunning()) {
-        wake_word_detect_.Feed(data);
+    if (wake_word_detect_.IsDetectionRunning()) {  // 如果唤醒词检测正在运行
+        wake_word_detect_.Feed(data);  // 输入音频数据  
     }
 #else
     if (chat_state_ == kChatStateListening) {  // 如果聊天状态为监听中
@@ -528,14 +528,14 @@ void Application::InputAudio() {  // 输入音频
 #endif
 }
 
-void Application::AbortSpeaking(AbortReason reason) {
+void Application::AbortSpeaking(AbortReason reason) {  // 中止说话
     ESP_LOGI(TAG, "Abort speaking");  // 打印“中止说话”
     aborted_ = true;  // 设置中止标志为true
     protocol_->SendAbortSpeaking(reason);  // 发送中止说话命令
 }
 
-void Application::SetChatState(ChatState state) {   // 设置聊天状态
-    if (chat_state_ == state) {
+void Application::SetChatState(ChatState state) {  // 设置聊天状态
+    if (chat_state_ == state) {  // 如果聊天状态与新状态相同
         return;
     }
     

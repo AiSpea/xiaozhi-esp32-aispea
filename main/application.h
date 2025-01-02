@@ -67,10 +67,10 @@ private:
     AudioProcessor audio_processor_;
 #endif
     Ota ota_;
-    std::mutex mutex_;
-    std::list<std::function<void()>> main_tasks_;
-    std::unique_ptr<Protocol> protocol_;
-    EventGroupHandle_t event_group_;
+    std::mutex mutex_;  // 互斥锁
+    std::list<std::function<void()>> main_tasks_;  // 主任务列表    
+    std::unique_ptr<Protocol> protocol_;  // 协议
+    EventGroupHandle_t event_group_;  // 事件组
     volatile ChatState chat_state_ = kChatStateUnknown;  // 聊天状态
     bool keep_listening_ = false;  // 保持监听
     bool aborted_ = false;  // 是否中止

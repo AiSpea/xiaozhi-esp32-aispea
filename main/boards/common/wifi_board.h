@@ -5,7 +5,7 @@
 
 class WifiBoard : public Board {
 protected:
-    bool wifi_config_mode_ = false;
+    bool wifi_config_mode_ = false; 
 
     virtual std::string GetBoardJson() override;
 
